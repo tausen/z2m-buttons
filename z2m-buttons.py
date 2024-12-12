@@ -85,7 +85,7 @@ class Button:
 class Bulb:
     """Represents dimmable bulb"""
 
-    def __init__(self, idents, brightness_dimmed=60, brightness_bright=100):
+    def __init__(self, idents, brightness_dimmed, brightness_bright):
         # idents is either string (single ident) or list of strings (several idents)
         assert type(idents) in (list, str)
         if isinstance(idents, str):
@@ -210,7 +210,9 @@ def instance_from_yaml(d):
 
     match d["type"]:
         case "bulb":
-            inst = Bulb(idents)
+            brightness_dimmed = d["brightness_dimmed"] if "brightness_dimmed" in d else 60
+            brightness_bright = d["brightness_bright"] if "brightness_bright" in d else 100
+            inst = Bulb(idents, brightness_dimmed=brightness_dimmed, brightness_bright=brightness_bright)
         case "relay":
             inst = Relay(idents)
         case "nordtronicrelay":
