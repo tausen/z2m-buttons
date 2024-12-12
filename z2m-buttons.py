@@ -178,7 +178,7 @@ class NordtronicRelay(Bulb):
             client.publish("zigbee2mqtt/"+self.idents[i]+"/set", payload=json.dumps(payload))
 
 
-class Relay(Bulb):
+class WiserRelay(Bulb):
     """Multi-channel relay
 
     https://www.zigbee2mqtt.io/devices/545D6514.html"""
@@ -213,8 +213,11 @@ def instance_from_yaml(d):
             brightness_dimmed = d["brightness_dimmed"] if "brightness_dimmed" in d else 60
             brightness_bright = d["brightness_bright"] if "brightness_bright" in d else 100
             inst = Bulb(idents, brightness_dimmed=brightness_dimmed, brightness_bright=brightness_bright)
-        case "relay":
-            inst = Relay(idents)
+        case "wiserrelay":
+            ontime = d["ontime"] if "ontime" in d else None
+            inst = WiserRelay(idents=[x["name"] for x in idents],
+                              channels=[x["channel"] for x in idents],
+                              ontime=ontime)
         case "nordtronicrelay":
             inst = NordtronicRelay(idents)
         case _:
