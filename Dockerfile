@@ -1,10 +1,10 @@
-FROM python:3.11-alpine
+FROM python:3.12-alpine
 
-# this installs a version that seems to be for python 3.11, thus basing on python 3.11 image
+# this installs a version that seems to be for python 3.12, thus basing on python 3.12 image
 RUN apk add --no-cache py3-paho-mqtt
 
 # the directory where the package is installed is not in PYTHONPATH by default, though, so:
-ENV PYTHONPATH /usr/lib/python3.11/site-packages
+ENV PYTHONPATH /usr/lib/python3.12/site-packages
 
 RUN apk add --no-cache py3-yaml
 
