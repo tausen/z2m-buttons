@@ -1,0 +1,22 @@
+server:
+  hostname: "mosquitto.lan"
+buttons:
+  btn_livingroom:
+    top:
+      - type: bulb
+        idents:
+          - Light Livingroom Table
+    bottom:
+      - type: nordtronicrelay
+        idents:
+          - Light Livingroom Relay
+      - type: bulb
+        idents:
+          - Light Livingroom Cabinet 1
+          - Light Livingroom Cabinet 2
+  btn_office:
+    top:
+      - type: bulb
+        idents:
+          - Button Office Ceiling
+          - Button Office Table
