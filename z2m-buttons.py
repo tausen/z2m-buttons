@@ -214,7 +214,8 @@ def instance_from_yaml(d):
             brightness_bright = d["brightness_bright"] if "brightness_bright" in d else 100
             inst = Bulb(idents, brightness_dimmed=brightness_dimmed, brightness_bright=brightness_bright)
         case "relay":
-            inst = Relay(idents)
+            inst = Relay([x["name"] for x in idents],
+                         [x["channel"] for x in idents])
         case "nordtronicrelay":
             inst = NordtronicRelay(idents)
         case _:
