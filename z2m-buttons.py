@@ -85,17 +85,20 @@ class Button:
 class Bulb:
     """Represents dimmable bulb"""
 
-    def __init__(self, idents, brightness_dimmed, brightness_bright):
+    def __init__(self, idents, brightness_default, brightness_dimmed, brightness_bright):
         # idents is either string (single ident) or list of strings (several idents)
         assert type(idents) in (list, str)
         if isinstance(idents, str):
             idents = [idents]
 
         self.idents = idents
+        self.brightness_default = brightness_default
         self.brightness_dimmed = brightness_dimmed
         self.brightness_bright = brightness_bright
 
-        if brightness_dimmed is None and brightness_bright is None:
+        if brightness_default is None or \
+           brightness_dimmed is None or \
+           brightness_bright is None:
             self.dimmable = False
         else:
             self.dimmable = True
@@ -105,9 +108,13 @@ class Bulb:
         assert state in (STATE_ON, STATE_OFF)
         for ident in self.idents:
             if self.dimmable and state == STATE_ON:
-                self.set_bright()  # default to bright
+                self.set_default()
             else:
                 client.publish("zigbee2mqtt/"+ident+"/set/state", payload=state)
+
+    def set_default(self):
+        """Set default brightness"""
+        self.set_brightness(self.brightness_default)
 
     def set_bright(self):
         """Set bright mode"""
@@ -134,7 +141,7 @@ class NordtronicRelay(Bulb):
     https://www.zigbee2mqtt.io/devices/98425031.html"""
 
     def __init__(self, idents):
-        super().__init__(idents, None, None)
+        super().__init__(idents, None, None, None)
 
     def set_state(self, state):
         """Set binary state (on/off)"""
@@ -156,7 +163,7 @@ class WiserRelay(Bulb):
         if isinstance(channels, int):
             channels = [channels]
 
-        super().__init__(idents, None, None)
+        super().__init__(idents, None, None, None)
         assert len(self.idents) == len(channels)
         self.channels = channels
         self.ontime = ontime
@@ -178,9 +185,13 @@ def instance_from_yaml(d):
 
     match d["type"]:
         case "bulb":
+            brightness_default = d["brightness_default"] if "brightness_default" in d else 100
             brightness_dimmed = d["brightness_dimmed"] if "brightness_dimmed" in d else 60
             brightness_bright = d["brightness_bright"] if "brightness_bright" in d else 100
-            inst = Bulb(idents, brightness_dimmed=brightness_dimmed, brightness_bright=brightness_bright)
+            inst = Bulb(idents,
+                        brightness_default=brightness_default,
+                        brightness_dimmed=brightness_dimmed,
+                        brightness_bright=brightness_bright)
         case "wiserrelay":
             ontime = d["ontime"] if "ontime" in d else None
             inst = WiserRelay(idents=[x["name"] for x in idents],
