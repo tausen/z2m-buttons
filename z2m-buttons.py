@@ -128,38 +128,6 @@ class Bulb:
             client.publish("zigbee2mqtt/"+ident+"/set/brightness", payload=brightness)
 
 
-class NightdimmedBulb:
-    """Dimmable bulb with different behavior at night"""
-
-    def __init__(self, idents_day, idents_night, brightness_dimmed, brightness_bright, brightness_night):
-        """
-        idents_night is assumed to be either the same as idents_day or a
-        subset of it
-        """
-        self.bulb_day = Bulb(idents_day, brightness_dimmed, brightness_bright)
-        self.bulb_night = Bulb(idents_night, brightness_night, brightness_bright)
-
-    def set_state(self, state):
-        """Override set_state to change default depending on time of day"""
-        if state == STATE_OFF:
-            self.bulb_day.set_state(state)
-        else:
-            hour = datetime.datetime.now().hour
-            if hour < 6:
-                self.bulb_night.set_dimmed()
-            else:
-                self.bulb_day.set_state(STATE_ON)
-
-    def set_bright(self):
-        self.bulb_day.set_bright()
-
-    def set_dimmed(self):
-        self.bulb_day.set_dimmed()
-
-    def set_brightness(self, brightness):
-        self.bulb_day.set_brightness(brightness)
-
-
 class NordtronicRelay(Bulb):
     """Nordtronic single-channel relay
 
