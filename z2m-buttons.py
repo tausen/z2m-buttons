@@ -185,9 +185,9 @@ def instance_from_yaml(d):
 
     match d["type"]:
         case "bulb":
-            brightness_default = d["brightness_default"] if "brightness_default" in d else 100
             brightness_dimmed = d["brightness_dimmed"] if "brightness_dimmed" in d else 60
             brightness_bright = d["brightness_bright"] if "brightness_bright" in d else 100
+            brightness_default = d["brightness_default"] if "brightness_default" in d else brightness_bright
             inst = Bulb(idents,
                         brightness_default=brightness_default,
                         brightness_dimmed=brightness_dimmed,
