@@ -4,7 +4,7 @@ FROM python:3.12-alpine
 RUN apk add --no-cache py3-paho-mqtt
 
 # the directory where the package is installed is not in PYTHONPATH by default, though, so:
-ENV PYTHONPATH /usr/lib/python3.12/site-packages
+ENV PYTHONPATH=/usr/lib/python3.12/site-packages
 
 RUN apk add --no-cache py3-yaml
 
