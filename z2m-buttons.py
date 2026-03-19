@@ -7,6 +7,8 @@ import datetime
 STATE_ON = "ON"
 STATE_OFF = "OFF"
 DOUBLE_CLICK_THRESHOLD = 1
+TOPIC_LIGHTMODE = "homeassistant/select/lightmode/value"
+LIGHTMODE = "bright"
 
 
 def on_connect(client, userdata, flags, rc):
@@ -14,22 +16,27 @@ def on_connect(client, userdata, flags, rc):
 
 
 def on_message(client, userdata, message):
-    device = message.topic.split("/")[1]
-    action = message.payload.decode()
-    time_now = message.timestamp
+    global LIGHTMODE
 
-    print(device, time_now, action)
+    if message.topic == TOPIC_LIGHTMODE:
+        LIGHTMODE = message.payload.decode()
+    else:
+        device = message.topic.split("/")[1]
+        action = message.payload.decode()
+        time_now = message.timestamp
 
-    if not action.startswith("press"):
-        return
+        print(device, time_now, action)
 
-    if device not in buttons:
-        print(f"{device}: unknown??")
-        return
+        if not action.startswith("press"):
+            return
 
-    keynum = int(action[-1])
+        if device not in buttons:
+            print(f"{device}: unknown??")
+            return
 
-    buttons[device].press(time_now, keynum)
+        keynum = int(action[-1])
+
+        buttons[device].press(time_now, keynum)
 
 
 class Button:
@@ -91,17 +98,37 @@ class Bulb:
         if isinstance(idents, str):
             idents = [idents]
 
-        self.idents = idents
-        self.brightness_default = brightness_default
-        self.brightness_dimmed = brightness_dimmed
-        self.brightness_bright = brightness_bright
+        self._idents = idents
+        self._brightness_default = brightness_default
+        self._brightness_dimmed = brightness_dimmed
+        self._brightness_bright = brightness_bright
 
         if brightness_default is None or \
            brightness_dimmed is None or \
            brightness_bright is None:
-            self.dimmable = False
+            self._dimmable = False
         else:
-            self.dimmable = True
+            self._dimmable = True
+
+    @property
+    def brightness_default(self):
+        return self._brightness_default
+
+    @property
+    def brightness_dimmed(self):
+        return self._brightness_dimmed
+
+    @property
+    def brightness_bright(self):
+        return self._brightness_bright
+
+    @property
+    def idents(self):
+        return self._idents
+
+    @property
+    def dimmable(self):
+        return self._dimmable
 
     def set_state(self, state):
         """Set binary state (on/off)"""
@@ -133,6 +160,33 @@ class Bulb:
         print(f"set brightness {brightness}")
         for ident in self.idents:
             client.publish("zigbee2mqtt/"+ident+"/set/brightness", payload=brightness)
+
+
+class NightBulb(Bulb):
+    """Bulb with different brightness at night
+
+    Same as Bulb, but changes default brightness depending on the value of
+    TOPIC_LIGHTMODE. Some other entity must publish "bright", "dimmed" or
+    "night" to this topic to control the behavior of a NightBulb. Use retain on
+    this topic.
+
+    """
+    def __init__(self, brightness_night, **kwargs):
+        super().__init__(**kwargs)
+        self._brightness_night = brightness_night
+
+    @property
+    def brightness_night(self):
+        return self._brightness_night
+
+    @property
+    def brightness_default(self):
+        if LIGHTMODE == "bright":
+            return self._brightness_default
+        elif LIGHTMODE == "dimmed":
+            return self.brightness_dimmed
+        else:  # night
+            return self.brightness_night
 
 
 class NordtronicRelay(Bulb):
@@ -184,14 +238,19 @@ def instance_from_yaml(d):
     idents = d["idents"]
 
     match d["type"]:
-        case "bulb":
+        case "bulb" | "nightbulb":
             brightness_dimmed = d["brightness_dimmed"] if "brightness_dimmed" in d else 60
             brightness_bright = d["brightness_bright"] if "brightness_bright" in d else 100
             brightness_default = d["brightness_default"] if "brightness_default" in d else brightness_bright
-            inst = Bulb(idents,
-                        brightness_default=brightness_default,
-                        brightness_dimmed=brightness_dimmed,
-                        brightness_bright=brightness_bright)
+            kwargs = {"idents": idents,
+                      "brightness_default": brightness_default,
+                      "brightness_dimmed": brightness_dimmed,
+                      "brightness_bright": brightness_bright}
+            if d["type"] == "bulb":
+                inst = Bulb(**kwargs)
+            else:
+                brightness_night = d["brightness_night"] if "brightness_night" in d else 1
+                inst = NightBulb(brightness_night, **kwargs)
         case "wiserrelay":
             ontime = d["ontime"] if "ontime" in d else None
             inst = WiserRelay(idents=[x["name"] for x in idents],
@@ -227,6 +286,7 @@ if __name__ == "__main__":
         buttons[btn_id] = Button([top, bottom])
 
     topics = ["zigbee2mqtt/"+x+"/action" for x in buttons]
+    topics.append(TOPIC_LIGHTMODE)
 
     client = mqtt.Client()
     client.on_connect = on_connect
