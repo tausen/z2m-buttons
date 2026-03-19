@@ -1,9 +1,11 @@
 #!/bin/bash
 
-docker run -d \
+docker run \
    --name z2m-buttons \
    -v /etc/resolv.conf:/etc/resolv.conf:ro \
    --network=host \
-   --restart=unless-stopped \
    --env PYTHONUNBUFFERED=1 \
+   --rm \
+   -v $(pwd):$(pwd) \
+   -w $(pwd) \
    z2m-buttons
