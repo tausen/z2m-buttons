@@ -34,6 +34,54 @@ def on_message(client, userdata, message):
         buttons[device].press(time_now, action)
 
 
+class BluButton:
+    """Represents 4-key Shelly Zigbee BLU button"""
+
+    def __init__(self, bulbs):
+        assert len(bulbs) == 2
+        self.bulbs = bulbs
+        self.last = {}
+
+    def press(self, timestamp, action):
+        """Trigger key pressed event"""
+
+        splt = action.split("_")
+        num = int(splt[0])
+        seq = splt[1]
+        dur = splt[2] if len(splt) > 2 else "short"
+
+        assert num >= 1 and num <= 4
+        assert seq in ("single", "double", "triple", "hold")
+        assert dur in ("short", "long")
+
+        if dur == "long" or seq == "triple":
+            return
+
+        bulbno = 0 if num in (1, 2) else 1
+        bulb = self.bulbs[bulbno]
+
+        if bulb is None:
+            return
+
+        if num in (1, 3):
+            state = STATE_ON
+        else:
+            state = STATE_OFF
+
+        if seq == "double" or seq == "hold":
+            # Double press or hold forces bright or dimmed light
+            if state == STATE_OFF:
+                for b in bulb:
+                    b.set_dimmed()
+            else:
+                for b in bulb:
+                    b.set_bright()
+        else:
+            # Single press behavior just asks bulb to turn on or off
+            for b in bulb:
+                b.set_state(state)
+
+
 class ZgpButton:
     """Represents 4-key Zigbee GreenPower button"""
 
@@ -278,6 +326,8 @@ if __name__ == "__main__":
             match config["buttons"][btn_id]["type"]:
                 case "ZGP":
                     btnclass = ZgpButton
+                case "BLU4":
+                    btnclass = BluButton
                 case _:
                     print(f"Skipped unknown button type {config['buttons'][btn_id]['type']}")
 
