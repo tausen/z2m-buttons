@@ -27,28 +27,28 @@ def on_message(client, userdata, message):
 
         print(device, time_now, action)
 
-        if not action.startswith("press"):
-            return
-
         if device not in buttons:
             print(f"{device}: unknown??")
             return
 
-        keynum = int(action[-1])
-
-        buttons[device].press(time_now, keynum)
+        buttons[device].press(time_now, action)
 
 
-class Button:
-    """Represents 4-key button"""
+class ZgpButton:
+    """Represents 4-key Zigbee GreenPower button"""
 
     def __init__(self, bulbs):
         assert len(bulbs) == 2
         self.bulbs = bulbs
         self.last = {}
 
-    def press(self, timestamp, num):
+    def press(self, timestamp, action):
         """Trigger key pressed event"""
+
+        if not action.startswith("press"):
+            return
+        num = int(action[-1])
+
         bulbno = 0 if num in (1, 3) else 1
         bulb = self.bulbs[bulbno]
 
@@ -272,6 +272,14 @@ if __name__ == "__main__":
     for btn_id in config['buttons']:
         top = None
         bottom = None
+        btnclass = ZgpButton
+
+        if "type" in config["buttons"][btn_id]:
+            match config["buttons"][btn_id]["type"]:
+                case "ZGP":
+                    btnclass = ZgpButton
+                case _:
+                    print(f"Skipped unknown button type {config['buttons'][btn_id]['type']}")
 
         if "top" in config['buttons'][btn_id]:
             top = []
@@ -283,7 +291,7 @@ if __name__ == "__main__":
             for variant in config['buttons'][btn_id]["bottom"]:
                 bottom.append(instance_from_yaml(variant))
 
-        buttons[btn_id] = Button([top, bottom])
+        buttons[btn_id] = btnclass([top, bottom])
 
     topics = ["zigbee2mqtt/"+x+"/action" for x in buttons]
     topics.append(TOPIC_LIGHTMODE)
